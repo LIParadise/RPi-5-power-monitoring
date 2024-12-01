@@ -87,7 +87,6 @@ macro_rules! vcgencmd_readings {
                 }
             }
             impl<T> std::ops::Deref for WattageMeasurement<T>
-                where T: SimpleNum + std::ops::Add<Output = T>
             {
                 type Target = T;
                 fn deref(&self) -> &Self::Target {

@@ -6,18 +6,20 @@ use std::str::FromStr;
 const RPI_5_VCGENCMD_PMIC_READ_ADC_OUTPUT_ROWS: usize = 12;
 const VCGENCMD_EXITED_NON_ZERO_CODE_COOLDOWN: u64 = 5;
 
+trait SimpleNum: Copy + std::ops::Mul<Output = Self> + FromStr {}
+impl<T> SimpleNum for T where T: Copy + std::ops::Mul<Output = T> + FromStr {}
+
 macro_rules! vcgencmd_readings {
     ($($type_: tt)*) => {
         paste!{
             #[allow(non_camel_case_types)]
             #[derive(Clone, Copy, Debug)]
-            enum AmpereMeasurement<T: Copy + std::ops::Mul<Output = T> + FromStr> {
+            enum AmpereMeasurement<T> {
                 $(
                     [<vcgencmd_ $type_>](T),
                 )*
             }
-            impl<'a, T> TryFrom<(&'a str, &'a str)> for AmpereMeasurement<T>
-                where T: Copy + std::ops::Mul<Output = T> + FromStr
+            impl<'a, T: SimpleNum> TryFrom<(&'a str, &'a str)> for AmpereMeasurement<T>
             {
                 type Error = (&'a str, &'a str);
                 fn try_from((str_ampere, str_float): (&'a str, &'a str)) -> Result<Self, Self::Error> {
@@ -38,13 +40,12 @@ macro_rules! vcgencmd_readings {
         paste!{
             #[allow(non_camel_case_types)]
             #[derive(Clone, Copy, Debug)]
-            enum VoltageMeasurement<T: Copy + std::ops::Mul<Output = T> + FromStr> {
+            enum VoltageMeasurement<T> {
                 $(
                     [<vcgencmd_ $type_>](T),
                 )*
             }
-            impl<'a, T> TryFrom<(&'a str, &'a str)> for VoltageMeasurement<T>
-                where T: Copy + std::ops::Mul<Output = T> + FromStr
+            impl<'a, T: SimpleNum> TryFrom<(&'a str, &'a str)> for VoltageMeasurement<T>
             {
                 type Error = (&'a str, &'a str);
                 fn try_from((str_voltage, str_float): (&'a str, &'a str)) -> Result<Self, Self::Error> {
@@ -65,13 +66,12 @@ macro_rules! vcgencmd_readings {
         paste!{
             #[allow(non_camel_case_types)]
             #[derive(Clone, Copy, Debug)]
-            enum WattageMeasurement<T: Copy + std::ops::Mul<Output = T> + FromStr> {
+            enum WattageMeasurement<T> {
                 $(
                     [<vcgencmd_ $type_>](T),
                 )*
             }
-            impl<T> TryFrom<(AmpereMeasurement<T>, VoltageMeasurement<T>)> for WattageMeasurement<T>
-                where T: Copy + std::ops::Mul<Output = T> + FromStr
+            impl<T: SimpleNum> TryFrom<(AmpereMeasurement<T>, VoltageMeasurement<T>)> for WattageMeasurement<T>
             {
                 type Error = (AmpereMeasurement<T>, VoltageMeasurement<T>);
                 fn try_from((a, v): (AmpereMeasurement<T>, VoltageMeasurement<T>)) -> Result<Self, Self::Error> {
@@ -87,7 +87,7 @@ macro_rules! vcgencmd_readings {
                 }
             }
             impl<T> std::ops::Deref for WattageMeasurement<T>
-                where T: Copy + std::ops::Mul<Output = T> + std::ops::Add<Output = T> + FromStr
+                where T: SimpleNum + std::ops::Add<Output = T>
             {
                 type Target = T;
                 fn deref(&self) -> &Self::Target {
@@ -100,7 +100,6 @@ macro_rules! vcgencmd_readings {
             }
 
             impl<T> From<&WattageMeasurement<T>> for &'static str
-                where T: Copy + std::ops::Mul<Output = T> + std::ops::Add<Output = T> + FromStr
             {
                 fn from(w: &WattageMeasurement<T>) -> Self {
                     match w {

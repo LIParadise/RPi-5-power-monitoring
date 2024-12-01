@@ -129,6 +129,9 @@ vcgencmd_readings! {
 
 fn main() {
     let mut vcgencmd = process::Command::new("vcgencmd");
+    vcgencmd
+        .arg("pmic_read_adc")
+        .stdout(std::process::Stdio::piped());
     let thread_sleep_duration: f32 = env::var("SLEEP")
         .map_err(|_| ())
         .and_then(|sleep| sleep.parse::<f32>().map_err(|_| ()))
@@ -140,11 +143,7 @@ fn main() {
     let mut amperes = Vec::with_capacity(RPI_5_VCGENCMD_PMIC_READ_ADC_OUTPUT_ROWS);
     let mut voltages = Vec::with_capacity(RPI_5_VCGENCMD_PMIC_READ_ADC_OUTPUT_ROWS);
 
-    while let Ok(ret) = vcgencmd
-        .arg("pmic_read_adc")
-        .stdout(std::process::Stdio::piped())
-        .output()
-    {
+    while let Ok(ret) = vcgencmd.output() {
         if !ret.status.success() {
             println!(
                 "\n\n!!!!!!!!! vcgencmd exited with status {:?}\n\n",
